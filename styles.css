@@ -1,0 +1,1200 @@
+/*
+================================================================================
+TOWING DISPATCH MONITORING SYSTEM - Stylesheet
+================================================================================
+
+This CSS file styles the entire dispatch application with a modern dark theme.
+It uses CSS custom properties (variables) for consistent theming and
+flexbox/grid for layouts.
+
+TABLE OF CONTENTS:
+1. CSS Variables (Theme Colors)
+2. Global Styles (Reset & Base)
+3. App Container & Header
+4. Stats Bar
+5. Main Content Layout
+6. Panel Styles
+7. Panel Resizer
+8. Button Styles
+9. Jobs Panel (Filters, Search, List, Items)
+10. Map Styles
+11. Dispatch Panel (Recommendations)
+12. Scrollbar Styles
+13. Animations
+14. Responsive Design
+15. Leaflet Map Popup Overrides
+
+================================================================================
+*/
+
+
+/* =============================================================================
+   1. CSS VARIABLES (CUSTOM PROPERTIES)
+   =============================================================================
+
+   CSS variables allow us to define colors once and reuse them throughout.
+   This makes it easy to change the entire theme by modifying just these values.
+
+   Usage: var(--variable-name)
+   Example: background: var(--bg-primary);
+
+   The :root selector targets the document's root element (<html>),
+   making these variables available globally.
+*/
+:root {
+    /* Background Colors - From darkest to lightest */
+    --bg-primary: #0a0a0f;      /* Main app background (almost black) */
+    --bg-secondary: #1a1a2e;    /* Secondary surfaces */
+    --bg-panel: #16213e;        /* Panel backgrounds (dark blue) */
+    --bg-hover: #243b55;        /* Hover state backgrounds */
+
+    /* Text Colors */
+    --text-primary: #e0e0e0;    /* Main text (light gray) */
+    --text-secondary: #a0a0a0;  /* Secondary/muted text */
+
+    /* Accent Colors - For highlights and indicators */
+    --accent-primary: #0f3460;   /* Primary accent (dark blue) */
+    --accent-secondary: #e94560; /* Secondary accent (red/pink) - used for CTAs */
+    --accent-success: #32cd32;   /* Success states (green) */
+    --accent-warning: #ff8c00;   /* Warning states (orange) */
+    --accent-danger: #ff4444;    /* Danger/urgent states (red) */
+
+    /* Utility Colors */
+    --border-color: #2a3f5f;     /* Border color for panels and elements */
+    --shadow-color: rgba(0, 0, 0, 0.5); /* Drop shadow color */
+
+    /* Gradients - For buttons and decorative elements */
+    --gradient-primary: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+    --gradient-secondary: linear-gradient(135deg, #e94560 0%, #ff4444 100%);
+}
+
+
+/* =============================================================================
+   2. GLOBAL STYLES (CSS RESET & BASE STYLES)
+   =============================================================================
+
+   These styles reset browser defaults and set up base styling.
+   The * selector targets ALL elements on the page.
+*/
+
+/* Universal Reset - Removes default margin/padding from all elements */
+* {
+    margin: 0;
+    padding: 0;
+    /*
+        box-sizing: border-box makes width/height include padding and border.
+        Without this, a 100px wide element with 10px padding would be 120px total.
+        With border-box, it stays at 100px (padding is inside).
+    */
+    box-sizing: border-box;
+}
+
+/* Body Styles - Base typography and background */
+body {
+    /*
+        Font Stack - Falls back through the list if fonts aren't available:
+        1. -apple-system: macOS/iOS system font
+        2. BlinkMacSystemFont: Chrome on macOS
+        3. 'Segoe UI': Windows system font
+        4. Roboto: Android/Google font
+        5. sans-serif: Generic fallback
+    */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    overflow: hidden;  /* Prevents scrollbars on the body (panels scroll internally) */
+    height: 100vh;     /* 100% of viewport height */
+}
+
+
+/* =============================================================================
+   3. APP CONTAINER & HEADER
+   =============================================================================
+
+   The app container is the main wrapper that holds everything.
+   It uses flexbox with column direction to stack header above main content.
+*/
+
+.app-container {
+    display: flex;
+    flex-direction: column;  /* Stack children vertically (header, then main) */
+    height: 100vh;           /* Fill the entire viewport height */
+    /*
+        Radial gradient creates a subtle vignette effect:
+        Lighter (#1a1a1a) at top center, fading to black at edges
+    */
+    background: radial-gradient(ellipse at top, #1a1a1a 0%, #000000 100%);
+}
+
+/* Header - Contains logo and stats bar */
+.app-header {
+    /*
+        Subtle gradient background matching panel headers
+        Creates a glass-like effect with very slight white tint
+    */
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;  /* Logo on left, stats on right */
+    align-items: center;             /* Vertically center items */
+    border-bottom: 1px solid var(--border-color);
+    z-index: 1000;  /* Ensures header stays above map elements */
+}
+
+/* Logo Title - Gradient text effect */
+.logo h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    /*
+        Gradient Text Technique:
+        1. Apply gradient as background
+        2. Clip background to text shape
+        3. Make text transparent so gradient shows through
+    */
+    background: linear-gradient(to right, #ffffff, #e0e0e0);
+    -webkit-background-clip: text;  /* Webkit browsers (Chrome, Safari) */
+    background-clip: text;           /* Standard property */
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.2rem;
+}
+
+/* Subtitle under the logo */
+.subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 300;  /* Light weight for subtle appearance */
+}
+
+
+/* =============================================================================
+   4. STATS BAR
+   =============================================================================
+
+   The stats bar displays real-time KPIs (Key Performance Indicators).
+   Each stat is a card showing a label and value.
+*/
+
+.stats-bar {
+    display: flex;
+    gap: 2rem;  /* Space between stat items */
+}
+
+/* Individual Stat Card */
+.stat-item {
+    text-align: center;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.03);  /* Very subtle white tint */
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    /*
+        backdrop-filter: blur creates a frosted glass effect
+        by blurring content behind the element
+    */
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;  /* Smooth hover animations */
+    position: relative;
+    overflow: hidden;  /* Clips the ::before pseudo-element */
+}
+
+/* Decorative top border that appears on hover */
+.stat-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-secondary);  /* Red/pink gradient */
+    opacity: 0;  /* Hidden by default */
+    transition: opacity 0.3s ease;
+}
+
+/* Stat card hover effect - lifts and glows */
+.stat-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);  /* Lift up slightly */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Show the top border on hover */
+.stat-item:hover::before {
+    opacity: 1;
+}
+
+/* Stat label (small text above the value) */
+.stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.3rem;
+}
+
+/* Stat value (the actual number) */
+.stat-value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/*
+    CRITICAL STATS STYLING
+    Stats marked with .stat-critical get extra visual emphasis
+    to draw dispatcher attention to the most important metrics
+*/
+.stat-item.stat-critical {
+    background: rgba(233, 69, 96, 0.15);  /* Red tinted background */
+    border: 1px solid rgba(233, 69, 96, 0.3);
+}
+
+.stat-item.stat-critical .stat-value {
+    color: var(--accent-secondary);  /* Red text for values */
+}
+
+.stat-item.stat-critical:hover {
+    background: rgba(233, 69, 96, 0.25);
+    border-color: rgba(233, 69, 96, 0.5);
+}
+
+
+/* =============================================================================
+   5. MAIN CONTENT LAYOUT
+   =============================================================================
+
+   The main content area uses flexbox to create a three-panel layout:
+   [Jobs Panel] [Resizer] [Map Panel] [Resizer] [Dispatch Panel]
+*/
+
+.main-content {
+    flex: 1;           /* Take all remaining vertical space after header */
+    display: flex;     /* Horizontal flexbox for panels */
+    gap: 0;            /* No gap - resizers provide spacing */
+    padding: 1rem;     /* Space around the panels */
+    overflow: hidden;  /* Prevent content from overflowing */
+}
+
+
+/* =============================================================================
+   6. PANEL STYLES
+   =============================================================================
+
+   Base styles for all three panels (jobs, map, dispatch).
+   Each panel is a flex container with vertical layout for its content.
+*/
+
+.panel {
+    background: rgba(20, 20, 20, 0.9);  /* Dark semi-transparent background */
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);  /* Strong drop shadow */
+    display: flex;
+    flex-direction: column;  /* Stack header, content, footer vertically */
+    overflow: hidden;        /* Clip content to rounded corners */
+    border: 1px solid rgba(255, 255, 255, 0.1);  /* Subtle light border */
+    position: relative;
+}
+
+/*
+    Individual Panel Sizing
+
+    flex: grow shrink basis
+    - grow: How much the panel should grow relative to others (0 = don't grow)
+    - shrink: How much to shrink if space is tight (0 = don't shrink)
+    - basis: Initial size before growing/shrinking
+
+    min-width/max-width: Constraints for the resizable panels
+*/
+
+/* Jobs Panel - Left side, fixed width */
+.jobs-panel {
+    flex: 0 0 320px;   /* Don't grow, don't shrink, 320px wide */
+    min-width: 280px;  /* Can't resize smaller than this */
+    max-width: 500px;  /* Can't resize larger than this */
+}
+
+/* Map Panel - Center, flexible width */
+.map-panel {
+    flex: 1;           /* Grow to fill remaining space */
+    position: relative;
+    min-width: 400px;  /* Minimum width for map to be usable */
+}
+
+/* Dispatch Panel - Right side, fixed width */
+.dispatch-panel {
+    flex: 0 0 350px;   /* Don't grow, don't shrink, 350px wide */
+    min-width: 300px;
+    max-width: 600px;
+}
+
+/* Panel Header - Title bar for each panel */
+.panel-header {
+    /*
+        Linear gradient creates a subtle 3D effect
+        Slightly lighter at top, darker at bottom
+    */
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;  /* Title on left, controls on right */
+    align-items: center;
+    position: relative;
+}
+
+/* Decorative gradient line under panel header */
+.panel-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    /*
+        Gradient fades from transparent to accent color and back
+        Creates a glowing line effect centered horizontally
+    */
+    background: linear-gradient(to right, transparent, var(--accent-secondary), transparent);
+    opacity: 0.5;
+}
+
+/* Panel title text */
+.panel-header h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;  /* Slightly tighter letter spacing */
+}
+
+
+/* =============================================================================
+   7. PANEL RESIZER
+   =============================================================================
+
+   The resizer is a draggable divider between panels.
+   Users can drag it to adjust panel widths.
+   JavaScript (app.js) handles the actual resize logic.
+*/
+
+.panel-resizer {
+    width: 8px;              /* Hit area for grabbing */
+    background: transparent;  /* Invisible by default */
+    cursor: col-resize;       /* Shows resize cursor on hover */
+    flex-shrink: 0;           /* Don't let it shrink */
+    position: relative;
+    z-index: 10;              /* Above panel content */
+    transition: background 0.2s ease;
+}
+
+/* Highlight when hovering or actively dragging */
+.panel-resizer:hover,
+.panel-resizer.dragging {
+    background: var(--accent-secondary);  /* Red highlight */
+}
+
+/* Visual handle indicator (small vertical line) */
+.panel-resizer::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);  /* Center the line */
+    width: 2px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+/* Brighter handle when hovering/dragging */
+.panel-resizer:hover::before,
+.panel-resizer.dragging::before {
+    background: rgba(255, 255, 255, 0.6);
+}
+
+
+/* =============================================================================
+   8. BUTTON STYLES
+   =============================================================================
+
+   Two main button types:
+   - btn-primary: Main action buttons (e.g., "Generate New Job")
+   - btn-icon: Small circular icon buttons (e.g., map controls)
+*/
+
+/* Primary Action Button */
+.btn-primary {
+    background: var(--gradient-secondary);  /* Red/pink gradient */
+    color: white;
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(233, 69, 96, 0.3);  /* Colored glow */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;  /* For ripple effect */
+}
+
+/* Ripple effect on click (expanding circle) */
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+/* Expand ripple when button is active (clicked) */
+.btn-primary:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* Hover effect - lift and glow */
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(233, 69, 96, 0.5);
+}
+
+/* Icon Button (circular) */
+.btn-icon {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;  /* Makes it circular */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Icon button hover - brighten and scale up */
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+
+/* =============================================================================
+   9. JOBS PANEL STYLES
+   =============================================================================
+
+   Styles for the left panel containing:
+   - Filter dropdowns
+   - Search input
+   - Scrollable job list
+   - Individual job cards
+*/
+
+/* Filter dropdown container */
+.jobs-filters {
+    padding: 1rem 1.5rem 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Filter dropdowns */
+.jobs-filters select {
+    flex: 1;  /* Each select takes equal width */
+    background: #555;
+    border: 1px solid var(--border-color);
+    color: white;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.jobs-filters select:hover {
+    background: #666;
+    border-color: var(--accent-secondary);
+}
+
+/* Focus state with glow effect */
+.jobs-filters select:focus {
+    outline: none;  /* Remove default browser outline */
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.2);  /* Red glow */
+}
+
+/* Dropdown options */
+.jobs-filters select option {
+    background: #555;
+    color: white;
+    padding: 0.5rem;
+}
+
+/* Selected/hovered option */
+.jobs-filters select option:hover,
+.jobs-filters select option:focus,
+.jobs-filters select option:checked {
+    background: black;
+    color: white;
+}
+
+/* Search input container */
+.job-search {
+    padding: 0 1.5rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Search input field */
+.job-search input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+/* Search input focus state */
+.job-search input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.2);
+}
+
+/* Placeholder text styling */
+.job-search input::placeholder {
+    color: var(--text-secondary);
+}
+
+/* Scrollable jobs list container */
+.jobs-list {
+    flex: 1;           /* Fill remaining panel height */
+    overflow-y: auto;  /* Enable vertical scrolling */
+    padding: 1rem;
+}
+
+/*
+    JOB CARD STYLES
+    Each job in the list is a clickable card showing job details.
+*/
+.job-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    animation: fadeInUp 0.3s ease;  /* Animate in when added to DOM */
+}
+
+/* Hover effect - slide right and highlight */
+.job-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(5px);
+    border-color: var(--accent-secondary);
+}
+
+/* Selected job state */
+.job-item.selected {
+    background: rgba(233, 69, 96, 0.1);
+    border-color: var(--accent-secondary);
+}
+
+/* Dispatched job state (truck assigned) */
+.job-item.dispatched {
+    background: rgba(15, 52, 96, 0.15);  /* Blue tint */
+    border-color: rgba(15, 52, 96, 0.5);
+    opacity: 0.85;  /* Slightly faded */
+}
+
+.job-item.dispatched:hover {
+    background: rgba(15, 52, 96, 0.25);
+    border-color: rgba(15, 52, 96, 0.8);
+}
+
+/* Left border indicator for job status */
+.job-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--accent-secondary);
+    opacity: 0;  /* Hidden by default */
+    transition: opacity 0.3s ease;
+}
+
+/* Pulsing indicator for urgent jobs */
+.job-item.urgent::before {
+    opacity: 1;
+    animation: urgentPulse 1s ease-in-out infinite;
+}
+
+/* Solid indicator for dispatched jobs */
+.job-item.dispatched::before {
+    background: var(--accent-primary);
+    opacity: 1;
+}
+
+/* Urgent pulse animation */
+@keyframes urgentPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Job card header (type badge + job ID) */
+.job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+/*
+    JOB TYPE BADGES
+    Color-coded badges indicating the job source
+    Each type has different priority and SLA requirements
+*/
+.job-type {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    display: inline-block;
+    letter-spacing: 0.5px;
+    position: relative;
+}
+
+/* Police jobs - Red (highest priority, 15 min SLA) */
+.job-type.police {
+    background: var(--accent-danger);
+    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4);
+}
+
+/* Bylaw jobs - Orange (high priority, 30 min SLA) */
+.job-type.bylaw {
+    background: var(--accent-warning);
+    box-shadow: 0 2px 8px rgba(255, 140, 0, 0.4);
+}
+
+/* Private jobs - Blue (medium priority, 60 min SLA) */
+.job-type.private {
+    background: #4169e1;
+    box-shadow: 0 2px 8px rgba(65, 105, 225, 0.4);
+}
+
+/* Retail jobs - Green (lower priority, 90 min SLA) */
+.job-type.retail {
+    background: var(--accent-success);
+    box-shadow: 0 2px 8px rgba(50, 205, 50, 0.4);
+}
+
+/* Job ID text */
+.job-id {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Job location/address */
+.job-location {
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
+    font-weight: 500;
+    color: #e0e0e0;
+}
+
+/* Job details row (SLA, revenue, etc.) */
+.job-details {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* SLA timer container */
+.job-sla {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* SLA timer value */
+.sla-timer {
+    font-weight: 600;
+}
+
+/* SLA timer colors based on time remaining */
+.sla-timer.critical { color: var(--accent-danger); }  /* Running out of time */
+.sla-timer.warning { color: var(--accent-warning); }  /* Getting close */
+.sla-timer.safe { color: var(--accent-success); }     /* Plenty of time */
+
+/* Dispatch info shown when truck is assigned */
+.dispatch-info {
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Assigned truck badge */
+.dispatch-truck {
+    background: rgba(15, 52, 96, 0.3);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #4da6ff;  /* Light blue */
+}
+
+/* Dispatch timestamp */
+.dispatch-time {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Empty state message */
+.empty-state {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: 2rem;
+    opacity: 0.7;
+}
+
+/* Urgent job styling */
+.job-item.urgent {
+    border-color: rgba(255, 68, 68, 0.5);
+    background: rgba(255, 68, 68, 0.05);
+    animation: pulse 2s infinite;  /* Subtle pulsing effect */
+}
+
+.job-item.urgent:hover {
+    border-color: rgba(255, 68, 68, 0.8);
+    background: rgba(255, 68, 68, 0.1);
+}
+
+/* Job constraint warning (e.g., underground parking) */
+.job-constraint {
+    background: rgba(255, 140, 0, 0.1);
+    border: 1px solid rgba(255, 140, 0, 0.3);
+    color: var(--accent-warning);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    display: inline-block;
+}
+
+
+/* =============================================================================
+   10. MAP STYLES
+   =============================================================================
+
+   Styles for the center panel containing the Leaflet map.
+   Includes the map container, controls, and legend.
+*/
+
+/* Map container - fills the panel */
+.map-container {
+    flex: 1;  /* Fill remaining height */
+    border-radius: 10px;
+    overflow: hidden;
+    height: 100%;
+    min-height: 400px;
+}
+
+/* Map control buttons container */
+.map-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Map legend - floating overlay showing color codes */
+.map-legend {
+    position: absolute;
+    top: 70px;  /* Below panel header */
+    left: 50%;
+    transform: translateX(-50%);  /* Center horizontally */
+    background: rgba(20, 20, 20, 0.9);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+    z-index: 1000;  /* Above map */
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+/* Individual legend item */
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+/* Color indicator circle */
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+}
+
+/*
+    CRITICAL: Map element sizing
+    Leaflet requires explicit dimensions to render properly.
+    Without these, the map may not display at all.
+*/
+#map {
+    width: 100%;
+    height: 100%;
+    min-height: 500px;
+    background: #111111;  /* Dark background while tiles load */
+    position: relative;
+}
+
+/* Leaflet container fix */
+.leaflet-container {
+    height: 100%;
+    width: 100%;
+    position: relative;
+}
+
+
+/* =============================================================================
+   11. DISPATCH PANEL STYLES
+   =============================================================================
+
+   Styles for the right panel showing:
+   - Recommendation mode selector
+   - Selected job details
+   - Ranked truck recommendations
+*/
+
+/* Recommendation mode dropdown */
+#recommendationMode {
+    background: #555;
+    border: 1px solid var(--border-color);
+    color: white;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+#recommendationMode option {
+    background: #555;
+    color: white;
+    padding: 0.5rem;
+}
+
+#recommendationMode option:hover,
+#recommendationMode option:focus,
+#recommendationMode option:checked {
+    background: black;
+    color: white;
+}
+
+/* Selected job display area */
+.selected-job {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.selected-job .empty-state {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* Selected job info card */
+.selected-job-info {
+    background: rgba(233, 69, 96, 0.1);
+    border: 1px solid rgba(233, 69, 96, 0.3);
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+/* Scrollable recommendations list */
+.recommendations-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+/* Individual recommendation card */
+.recommendation-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+/* Recommendation hover effect */
+.recommendation-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+}
+
+/* Top pick (best recommendation) styling */
+.recommendation-item.top-pick {
+    border-color: var(--accent-success);
+    background: rgba(50, 205, 50, 0.1);
+}
+
+/* Recommendation header (truck info + score) */
+.recommendation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+/* Truck info container */
+.truck-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Truck type badge */
+.truck-type {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Score badge (star rating + number) */
+.score-badge {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--accent-success);
+}
+
+/* Recommendation details grid */
+.recommendation-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);  /* 2 columns */
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* Individual detail item */
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* Detail bullet icon */
+.detail-icon {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+/*
+    FLEET OVERVIEW STYLES (Legacy - no longer used in main layout)
+    Kept for potential future use or if the section is re-enabled
+*/
+.fleet-overview {
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-top: 1px solid var(--border-color);
+}
+
+.fleet-overview h3 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.fleet-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem;
+}
+
+.fleet-stat {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.8rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.fleet-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    display: block;
+    margin-bottom: 0.3rem;
+}
+
+.fleet-stat-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+
+/* =============================================================================
+   12. SCROLLBAR STYLES
+   =============================================================================
+
+   Custom scrollbar styling for webkit browsers (Chrome, Safari, Edge).
+   Creates a dark-themed scrollbar matching the app design.
+*/
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+
+/* =============================================================================
+   13. ANIMATIONS
+   =============================================================================
+
+   Keyframe animations for various UI elements.
+   These create smooth, professional visual effects.
+*/
+
+/* Gentle pulsing effect for urgent items */
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Slide in from left */
+@keyframes slideIn {
+    from { transform: translateX(-20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Fade in from below */
+@keyframes fadeInUp {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Status indicator pulse (for map markers) */
+@keyframes statusPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.2); }
+}
+
+/* Status indicator dot */
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+
+/* =============================================================================
+   14. RESPONSIVE DESIGN
+   =============================================================================
+
+   Media queries adjust the layout for different screen sizes.
+   The app is primarily designed for desktop dispatch workstations.
+*/
+
+/* Medium screens (1400px and below) */
+@media (max-width: 1400px) {
+    .jobs-panel { flex: 0 0 320px; }
+    .dispatch-panel { flex: 0 0 350px; }
+}
+
+/* Smaller screens (1200px and below) */
+@media (max-width: 1200px) {
+    .stats-bar { gap: 1rem; }           /* Reduce gap between stats */
+    .stat-item { padding: 0.4rem 0.8rem; }  /* Smaller stat cards */
+}
+
+
+/* =============================================================================
+   15. LEAFLET MAP POPUP OVERRIDES
+   =============================================================================
+
+   Custom styling for Leaflet map popups to match the app's dark theme.
+   These override Leaflet's default light-themed popups.
+*/
+
+/* Popup wrapper (the white box) */
+.leaflet-popup-content-wrapper {
+    background: var(--bg-panel);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px var(--shadow-color);
+}
+
+/* Popup arrow/tip */
+.leaflet-popup-tip {
+    background: var(--bg-panel);
+}
+
+/* Popup content container */
+.popup-content {
+    padding: 0.5rem;
+}
+
+/* Popup title */
+.popup-content h4 {
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+/* Popup text */
+.popup-content p {
+    margin: 0.3rem 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* Professional Tooltips - Remove help cursor */
+[title] {
+    position: relative;
+}

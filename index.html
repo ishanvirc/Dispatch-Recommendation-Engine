@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<!--
+    ============================================================
+    TOWING DISPATCH MONITORING SYSTEM - Main HTML File
+    ============================================================
+
+    This is a real-time fleet management application for a towing company.
+    It displays:
+    - A list of active towing jobs (left panel)
+    - A live map showing truck and job locations (center panel)
+    - AI-powered dispatch recommendations (right panel)
+
+    The app uses three main JavaScript files:
+    - app.js: Core application logic, state management, job generation
+    - map.js: Leaflet map integration, markers, hot zone visualization
+    - dispatch.js: Intelligent truck recommendation algorithm
+
+    ============================================================
+-->
+<html lang="en">
+<head>
+    <!--
+        CHARACTER ENCODING
+        UTF-8 allows the page to display special characters and emojis correctly
+    -->
+    <meta charset="UTF-8">
+
+    <!--
+        RESPONSIVE VIEWPORT
+        This meta tag ensures the page scales properly on mobile devices
+        - width=device-width: Match the screen width of the device
+        - initial-scale=1.0: Don't zoom in or out by default
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Page title shown in browser tab -->
+    <title>Y/N Towing - Dispatch Monitoring System</title>
+
+    <!--
+        EXTERNAL CSS: Leaflet Map Library Styles
+        Leaflet is an open-source JavaScript library for interactive maps.
+        This CSS file styles the map tiles, markers, popups, and controls.
+        Loaded from unpkg CDN (Content Delivery Network) for fast delivery.
+    -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!--
+        CUSTOM CSS: Our Application Styles
+        Contains all custom styling for the dispatch interface including:
+        - Dark theme colors and gradients
+        - Panel layouts and flexbox configurations
+        - Button styles, animations, and hover effects
+        - Responsive design adjustments
+    -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!--
+        ============================================================
+        APP CONTAINER
+        ============================================================
+        The main wrapper that holds the entire application.
+        Uses CSS flexbox to create the overall page layout:
+        - Header at the top
+        - Three-panel main content area below
+    -->
+    <div class="app-container">
+
+        <!--
+            ============================================================
+            HEADER SECTION
+            ============================================================
+            Contains the company logo/title and real-time statistics bar.
+            The stats update automatically via JavaScript (app.js).
+        -->
+        <header class="app-header">
+            <!-- Company branding -->
+            <div class="logo">
+                <h1> Y/N Towing Dispatch</h1>
+                <span class="subtitle">Real-Time Fleet Management</span>
+            </div>
+
+            <!--
+                STATISTICS BAR
+                Displays key performance indicators (KPIs) that update in real-time.
+                Each stat-item has:
+                - stat-label: Description of the metric
+                - stat-value: The actual number (updated by JavaScript using the ID)
+
+                The "stat-critical" class adds visual emphasis (red border/highlight)
+                to indicate these are the most important metrics for dispatchers.
+            -->
+            <div class="stats-bar">
+                <!-- CRITICAL: Number of jobs waiting to be dispatched -->
+                <div class="stat-item stat-critical">
+                    <span class="stat-label">Active Jobs</span>
+                    <span class="stat-value" id="activeJobs">0</span>
+                </div>
+
+                <!-- CRITICAL: How many trucks are available vs busy -->
+                <div class="stat-item stat-critical">
+                    <span class="stat-label">Fleet Status</span>
+                    <span class="stat-value" id="fleetStatus">17 Available / 0 Busy</span>
+                </div>
+
+                <!-- Total jobs completed today -->
+                <div class="stat-item">
+                    <span class="stat-label">Jobs Done</span>
+                    <span class="stat-value" id="jobsDone">0</span>
+                </div>
+
+                <!-- Cumulative revenue earned today -->
+                <div class="stat-item">
+                    <span class="stat-label">Today's Revenue</span>
+                    <span class="stat-value" id="totalRevenue">$0</span>
+                </div>
+
+                <!-- Current system time (updates every second) -->
+                <div class="stat-item">
+                    <span class="stat-label">System Time</span>
+                    <span class="stat-value" id="systemTime">00:00</span>
+                </div>
+            </div>
+        </header>
+
+        <!--
+            ============================================================
+            MAIN CONTENT AREA
+            ============================================================
+            Uses CSS flexbox to create a three-panel layout:
+            1. Left Panel (jobs-panel): List of jobs
+            2. Center Panel (map-panel): Interactive fleet map
+            3. Right Panel (dispatch-panel): Truck recommendations
+
+            The panels are separated by resizable dividers (panel-resizer)
+            that allow users to drag and adjust panel widths.
+        -->
+        <main class="main-content">
+
+            <!--
+                ========================================
+                LEFT PANEL - JOBS LIST
+                ========================================
+                Displays all towing jobs in the system.
+                Users can filter, search, and select jobs.
+                When a job is selected, it shows recommendations
+                in the right panel and centers the map on the job.
+            -->
+            <section class="panel jobs-panel">
+                <!-- Panel header with title and action button -->
+                <div class="panel-header">
+                    <h2>JOBS</h2>
+                    <!--
+                        Generate New Job Button
+                        Clicking this creates a random job for testing/demo purposes.
+                        The click handler is set up in app.js (setupEventListeners function).
+                    -->
+                    <button class="btn-primary" id="generateJob">Generate New Job</button>
+                </div>
+
+                <!--
+                    JOB FILTERS
+                    Dropdown menus to filter the jobs list.
+                    Changes trigger updateJobsDisplay() in app.js.
+                -->
+                <div class="jobs-filters">
+                    <!-- Filter by job type (who requested the tow) -->
+                    <select id="jobTypeFilter">
+                        <option value="all">All Types</option>
+                        <option value="police">Police</option>      <!-- 15 min SLA -->
+                        <option value="bylaw">Bylaw</option>        <!-- 30 min SLA -->
+                        <option value="private">Private</option>    <!-- 60 min SLA -->
+                        <option value="retail">Retail</option>      <!-- 90 min SLA -->
+                    </select>
+
+                    <!-- Filter by job status -->
+                    <select id="jobStatusFilter">
+                        <option value="active">All</option>
+                        <option value="pending">Pending</option>        <!-- Waiting for dispatch -->
+                        <option value="dispatched">Dispatched</option>  <!-- Truck assigned -->
+                        <option value="completed">Completed</option>    <!-- Job finished -->
+                    </select>
+                </div>
+
+                <!-- Search box to find jobs by address or ID -->
+                <div class="job-search">
+                    <input type="text" id="jobSearch" placeholder="Search by location or ID..." />
+                </div>
+
+                <!--
+                    JOBS LIST CONTAINER
+                    This div is populated dynamically by JavaScript (updateJobsDisplay function).
+                    Each job is rendered as a clickable card showing:
+                    - Job ID and type
+                    - Location/address
+                    - Time remaining on SLA
+                    - Estimated revenue
+                -->
+                <div class="jobs-list" id="jobsList">
+                    <!-- Jobs will be added here dynamically by app.js -->
+                </div>
+            </section>
+
+            <!--
+                PANEL RESIZER (Left)
+                An invisible draggable divider between the jobs panel and map panel.
+                Users can drag this to resize the panels.
+                The resize logic is handled by initPanelResizers() in app.js.
+            -->
+            <div class="panel-resizer" id="resizer-left"></div>
+
+            <!--
+                ========================================
+                CENTER PANEL - FLEET MAP
+                ========================================
+                An interactive map powered by Leaflet.js showing:
+                - Truck positions (updated in real-time as they move)
+                - Job locations (color-coded by type)
+                - Hot zone radius (6km circle around HQ)
+                - Company headquarters location
+            -->
+            <section class="panel map-panel">
+                <div class="panel-header">
+                    <h2>Fleet Map</h2>
+
+                    <!-- Map control buttons -->
+                    <div class="map-controls">
+                        <!--
+                            Center on HQ Button
+                            Pans the map to show the company headquarters.
+                            Click handler in map.js (setupMapControls function).
+                        -->
+                        <button class="btn-icon" id="centerMap" title="Center on HQ">
+                            <span>📍</span>
+                        </button>
+
+                        <!--
+                            Toggle Hot Zone Button
+                            Shows/hides the 6km radius circle around HQ.
+                            The hot zone indicates the primary service area.
+                        -->
+                        <button class="btn-icon" id="toggleHotZone" title="Toggle Hot Zone">
+                            <span>◎</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!--
+                    MAP CONTAINER
+                    Leaflet.js renders the interactive map inside this div.
+                    The map is initialized by initializeMap() in map.js.
+                    Important: This div needs a defined height (set in CSS)
+                    for the map to display properly.
+                -->
+                <div id="map" class="map-container"></div>
+
+                <!--
+                    MAP LEGEND
+                    Explains the color coding used for job markers on the map.
+                    Each job type has a distinct color for quick identification.
+                -->
+                <div class="map-legend">
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #ff4444;"></span>
+                        <span>Police</span>     <!-- Red - highest priority -->
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #ff8c00;"></span>
+                        <span>Bylaw</span>      <!-- Orange - high priority -->
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #4169e1;"></span>
+                        <span>Private</span>    <!-- Blue - medium priority -->
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #32cd32;"></span>
+                        <span>Retail</span>     <!-- Green - lower priority -->
+                    </div>
+                </div>
+            </section>
+
+            <!--
+                PANEL RESIZER (Right)
+                Draggable divider between map panel and dispatch panel.
+            -->
+            <div class="panel-resizer" id="resizer-right"></div>
+
+            <!--
+                ========================================
+                RIGHT PANEL - DISPATCH RECOMMENDATIONS
+                ========================================
+                Displays AI-powered truck recommendations for the selected job.
+                The algorithm (in dispatch.js) scores trucks based on:
+                - Distance to job (proximity)
+                - Revenue fairness (balanced earnings across drivers)
+                - Job urgency (time remaining on SLA)
+            -->
+            <section class="panel dispatch-panel">
+                <div class="panel-header">
+                    <h2>Dispatch Recommendation</h2>
+
+                    <!--
+                        RECOMMENDATION MODE SELECTOR
+                        Allows dispatchers to prioritize different factors:
+                        - Balanced: Equal weight to distance, fairness, and urgency
+                        - Fastest: Prioritize nearest available truck
+                        - Revenue Fairness: Prioritize trucks with lower earnings
+                    -->
+                    <select id="recommendationMode">
+                        <option value="balanced">Balanced</option>
+                        <option value="fastest">Fastest Response</option>
+                        <option value="revenue">Revenue Fairness</option>
+                    </select>
+                </div>
+
+                <!--
+                    SELECTED JOB DISPLAY
+                    Shows details of the currently selected job.
+                    Updated by showSelectedJob() in app.js when a job is clicked.
+                -->
+                <div class="selected-job" id="selectedJob">
+                    <p class="empty-state">Select a job to see recommendations</p>
+                </div>
+
+                <!--
+                    RECOMMENDATIONS LIST
+                    Shows ranked truck recommendations for the selected job.
+                    Each recommendation card displays:
+                    - Truck ID and type
+                    - Distance and ETA
+                    - Driver's current revenue and job count
+                    - Score breakdown (visual bars)
+
+                    Populated by showRecommendations() in dispatch.js.
+                    Clicking a recommendation assigns that truck to the job.
+                -->
+                <div class="recommendations-list" id="recommendationsList">
+                    <!-- Recommendations will be added here dynamically by dispatch.js -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!--
+        ============================================================
+        JAVASCRIPT FILES
+        ============================================================
+        Scripts are loaded at the end of the body for two reasons:
+        1. The HTML elements exist before scripts try to access them
+        2. The page content displays faster (scripts don't block rendering)
+
+        Load order matters! Dependencies must be loaded first:
+        1. Leaflet.js - Map library (external dependency)
+        2. app.js - Core app logic and state management
+        3. map.js - Map functionality (depends on Leaflet and app.js)
+        4. dispatch.js - Recommendation engine (depends on app.js)
+    -->
+
+    <!-- Leaflet.js - Open-source interactive map library -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Core application: state management, fleet initialization, job generation -->
+    <script src="app.js"></script>
+
+    <!-- Map functionality: markers, popups, hot zone, truck movement -->
+    <script src="map.js"></script>
+
+    <!-- Dispatch algorithm: truck scoring and recommendation engine -->
+    <script src="dispatch.js"></script>
+</body>
+</html>
